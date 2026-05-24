@@ -1,11 +1,12 @@
 import data_loader
+import generate_embeddings
 
 if __name__ == "__main__":
+    OUTPUT_FILE = "filtered_arxiv_papers.parquet"
+
     # Load and filter arxiv data using the generic loader
-    df = data_loader.load_arxiv_data()
+    df = data_loader.load_or_cache_arxiv_data(OUTPUT_FILE)
     
     print(df.head())
-    
-    output_file = "filtered_arxiv_papers.parquet"
-    df.to_parquet(output_file, index=False)
-    print(f"Saved {len(df)} filtered papers to '{output_file}'")
+
+    generate_embeddings.generate_embeddings(OUTPUT_FILE)

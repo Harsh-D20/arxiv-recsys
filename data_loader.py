@@ -2,6 +2,7 @@ import kagglehub
 import os
 import json
 import pandas as pd
+from typing import Dict, Generator, List, Optional, Set, Union
 
 DEFAULT_CATEGORIES = {
     "cs.AI",  # Artificial Intelligence
@@ -9,13 +10,13 @@ DEFAULT_CATEGORIES = {
     "cs.CL",  # Computation and Language (NLP)
 }
 
-def download_arxiv_dataset():
+def download_arxiv_dataset() -> str:
     # Download latest version of arxiv dataset from kaggle
     cache_path = kagglehub.dataset_download("Cornell-University/arxiv")
     file_path = os.path.join(cache_path, "arxiv-metadata-oai-snapshot.json")
     return file_path
 
-def stream_arxiv_data(file_path, target_categories=None):
+def stream_arxiv_data(file_path: str, target_categories: Optional[Set[str]] = None) -> Generator[Dict[str, str], None, None]:
     """
     A generator that yields one paper at a time.
     This prevents Out-Of-Memory (OOM) errors by never loading the whole 3.5GB file into RAM.
@@ -40,7 +41,7 @@ def stream_arxiv_data(file_path, target_categories=None):
                 'update_date': paper['update_date']
             }
 
-def get_filtered_papers(file_path, target_categories):
+def get_filtered_papers(file_path: str, target_categories: Set[str]) -> List[Dict[str, str]]:
     """
     Returns a list of papers that belong to the target categories.
     This is a convenience function that collects all filtered papers into a list.
@@ -48,7 +49,7 @@ def get_filtered_papers(file_path, target_categories):
     """
     return list(stream_arxiv_data(file_path, target_categories))
 
-def load_arxiv_data(target_categories=DEFAULT_CATEGORIES, as_dataframe=True):
+def load_arxiv_data(target_categories: Set[str] = DEFAULT_CATEGORIES, as_dataframe: bool = True) -> Union[pd.DataFrame, List[Dict[str, str]]]:
     """
     Downloads the dataset and returns filtered papers.
     """
@@ -58,3 +59,24 @@ def load_arxiv_data(target_categories=DEFAULT_CATEGORIES, as_dataframe=True):
     if as_dataframe:
         return pd.DataFrame(papers)
     return papers
+
+def load_or_cache_arxiv_data(output_file: str, target_categories: Set[str] = DEFAULT_CATEGORIES) -> pd.DataFrame:
+    """
+    Loads arxiv data from cache if available, otherwise generates and caches it.
+    
+    Args:
+        output_file: Path to the parquet file for caching
+        target_categories: Categories to filter papers by
+    
+    Returns:
+        DataFrame containing the filtered arxiv papers
+    """
+    if os.path.exists(output_file):
+        print(f"Loading cached data from '{output_file}'")
+        return pd.read_parquet(output_file)
+    
+    print(f"Generating and caching arxiv data to '{output_file}'")
+    df = load_arxiv_data(target_categories, as_dataframe=True)
+    df.to_parquet(output_file, index=False)
+    print(f"Saved {len(df)} filtered papers to '{output_file}'")
+    return df
