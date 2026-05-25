@@ -1,22 +1,17 @@
-# 1. Use an official, lightweight Python image
 FROM python:3.10-slim
 
-# 2. Set the working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# 3. Copy the requirements file and install dependencies
-# We do this first to leverage Docker's caching mechanism
+# Install dependencies first (for Docker layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Copy your application code and data into the container
-COPY app.py .
-COPY vector_search.py .
-COPY paper_embeddings.npy .
-COPY ai_papers_final.parquet .
+# Copy all your code and data into the container
+COPY . .
 
-# 5. Expose the port FastAPI runs on
-EXPOSE 8000
+# Hugging Face Spaces requires exposing port 7860
+EXPOSE 7860
 
-# 6. Command to run the application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the Streamlit app
+CMD ["streamlit", "run", "ui.py", "--server.port=7860", "--server.address=0.0.0.0"]
