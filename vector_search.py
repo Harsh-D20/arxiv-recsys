@@ -18,7 +18,7 @@ def expand_query(query: str) -> str:
     """Calls an LLM to generate synonyms and appends them to the query."""
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        print("No Groq API Key found. Skipping expansion.")
+        print("No Groq API Key found. Skipping expansion.", flush=True)
         return query
         
     try:
@@ -38,11 +38,11 @@ def expand_query(query: str) -> str:
         
         synonyms = chat_completion.choices[0].message.content.strip()
         expanded = f"{query} {synonyms}"
-        print(f"\n[CACHE MISS] API Called! Expanded '{query}' -> '{expanded}'")
+        print(f"\n[CACHE MISS] API Called! Expanded '{query}' -> '{expanded}'", flush=True)
         return expanded
         
     except Exception as e:
-        print(f"API Error during expansion: {e}")
+        print(f"API Error during expansion: {e}", flush=True)
         return query
 
 
@@ -106,7 +106,7 @@ class SemanticSearchEngine:
                 "id": paper['id']
             })
             
-        return results
+        return results, expanded_query
 
 if __name__ == "__main__":
     engine = SemanticSearchEngine("paper_embeddings.npy", "ai_papers_final.parquet")
