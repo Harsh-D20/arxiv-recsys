@@ -30,7 +30,7 @@ def expand_query(query: str) -> str:
         
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="qwen/qwen3-32b",        # Limit: 60 requests/min, 6K tokens/min
+            model="llama-3.1-8b-instant",        # Limit: 30 requests/min, 6K tokens/min
             temperature=0.1,
             max_tokens=30,
         )
