@@ -40,12 +40,20 @@ query = st.text_input("Enter a technical concept:", placeholder="e.g., optimizin
 
 if st.button("Search", type="primary"):
     if query:
-        start_time = time.time()
+        with st.spinner("Analyzing query and searching database..."):
+            start_time = time.time()
+            
+            # MODIFIED: Unpack both the search results AND the LLM-expanded query string
+            results, final_expanded_query = engine.search(query, top_k=5)
+            
+            latency = time.time() - start_time
         
-        # Run the search directly
-        results = engine.search(query, top_k=5)
-        
-        latency = time.time() - start_time
+        # NEW UI ELEMENT: Display a status indicator showing what the engine actually searched for
+        if final_expanded_query != query:
+            st.info(f"**AI Query Expansion active:** Searching for `{final_expanded_query}`")
+        else:
+            st.warning("**Query Expansion bypassed:** Running raw keyword search (Check GROQ_API_KEY setup).")
+            
         st.success(f"⚡ Retrieved {len(results)} papers in {latency:.4f} seconds!")
         
         # 5. Display the Results
