@@ -31,8 +31,8 @@ def expand_query(query: str) -> str:
         
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama3-8b-8192", # Extremely fast, lightweight model
-            temperature=0.1,        # Low temperature for deterministic, factual outputs
+            model="llama-3.1-8b-instant",
+            temperature=0.1,
             max_tokens=30,
         )
         
