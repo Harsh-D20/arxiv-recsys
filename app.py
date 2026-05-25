@@ -62,7 +62,7 @@ if st.button("Search", type="primary"):
             arxiv_url = f"https://arxiv.org/abs/{res['id']}"
             
             st.markdown(f"### [{res['title']}]({arxiv_url})")
-            st.caption(f"Rank: {res['rank']} | Similarity Score: {res['score']:.4f} | Categories: {res['categories']}")
+            st.caption(f"Rank: {res['rank']} | Categories: {res['categories']}")
             
             st.write(res['abstract'])
             st.divider()
