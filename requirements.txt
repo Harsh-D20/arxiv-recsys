@@ -7,3 +7,4 @@ faiss-cpu
 streamlit
 groq
 rank_bm25
+huggingface_hub
