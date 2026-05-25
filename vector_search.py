@@ -90,7 +90,7 @@ class SemanticSearchEngine:
         for rank, row_idx in enumerate(sparse_results):
             rrf_scores[row_idx] = rrf_scores.get(row_idx, 0) + (1.0 / (rank + 60))
             
-        sorted_fused_results = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+        sorted_fused_results = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
         
         # --- 4. FORMAT RESULTS ---
         results = []
@@ -112,7 +112,8 @@ if __name__ == "__main__":
     
     test_query = "dynamic guardrail models"
     print(f"\nSearching for: '{test_query}'")
-    results = engine.search(test_query, top_k=5)
+    results, eq = engine.search(test_query, top_k=5)
+    print(eq)
     
-    for res in results:
+    for res in results[:10]:
         print(f"{res['rank']}. [Score: {res['score']:.4f}] {res['title']}")
