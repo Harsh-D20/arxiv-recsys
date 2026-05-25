@@ -1,6 +1,7 @@
 import streamlit as st
 from vector_search import SemanticSearchEngine
 import time
+from huggingface_hub import hf_hub_download  # <-- Add this import
 
 # 1. Page Configuration
 st.set_page_config(page_title="ArXiv ML Search", page_icon="🔍", layout="centered")
@@ -8,7 +9,24 @@ st.set_page_config(page_title="ArXiv ML Search", page_icon="🔍", layout="cente
 # 2. Cache the ML Model 
 @st.cache_resource
 def load_engine():
-    return SemanticSearchEngine("paper_embeddings.npy", "ai_papers_final.parquet")
+    REPO_ID = "harsh-d/arxiv-search-data" 
+    
+    # Dynamically stream/download the heavy assets directly into the Space's 50GB disk
+    with st.spinner("Downloading matrix embeddings from HF Hub..."):
+        embeddings_local_path = hf_hub_download(
+            repo_id=REPO_ID, 
+            filename="paper_embeddings.npy", 
+            repo_type="dataset"
+        )
+        
+    with st.spinner("Downloading paper metadata parquet..."):
+        metadata_local_path = hf_hub_download(
+            repo_id=REPO_ID, 
+            filename="ai_papers_final.parquet",
+            repo_type="dataset"
+        )
+    
+    return SemanticSearchEngine(embeddings_local_path, metadata_local_path)
 
 with st.spinner("Loading ML Engine & Vector Database..."):
     engine = load_engine()
