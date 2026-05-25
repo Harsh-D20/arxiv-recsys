@@ -2,6 +2,10 @@ pandas
 pyarrow
 numpy
 torch
+torchvision
 sentence-transformers
 faiss-cpu
 streamlit
+groq
+rank_bm25
+huggingface_hub

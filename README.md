@@ -1,21 +1,10 @@
-# Setup
+---
+title: Arxiv Semantic Search
+emoji: 🏢
+colorFrom: pink
+colorTo: indigo
+sdk: docker
+pinned: false
+---
 
-1. Create a venv with the command:
-   ```bash
-   python -m venv venv
-   ```
-
-2. Activate the venv:
-   ```bash
-   source venv/bin/activate
-   ```
-
-3. Install the requirements from requirements.txt:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Run the project:
-   ```bash
-   python main.py
-   ```
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference

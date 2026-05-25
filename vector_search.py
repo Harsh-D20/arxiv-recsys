@@ -2,9 +2,48 @@ import numpy as np
 import pandas as pd
 import faiss
 import torch
+import os
+from functools import lru_cache
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
-import time
+from groq import Groq
+
+# ------------------------------------------------------------
+# THE CACHED LLM EXPANSION FUNCTION
+# @lru_cache(maxsize=1000) stores the last 1000 searches in RAM. 
+# ------------------------------------------------------------
+@lru_cache(maxsize=1000)
+def expand_query(query: str) -> str:
+    """Calls an LLM to generate synonyms and appends them to the query."""
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        print("No Groq API Key found. Skipping expansion.", flush=True)
+        return query
+        
+    try:
+        client = Groq(api_key=api_key)
+        
+        # We use a very strict prompt so the LLM doesn't get chatty
+        prompt = f"""Given this technical search query, generate 3 to 5 related technical synonyms, alternate acronyms, or related core concepts. 
+        Return ONLY the words separated by spaces. Do not write a sentence. Do not use commas.
+        Query: {query}"""
+        
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.1-8b-instant",        # Limit: 30 requests/min, 6K tokens/min
+            temperature=0.1,
+            max_tokens=30,
+        )
+        
+        synonyms = chat_completion.choices[0].message.content.strip()
+        expanded = f"{query} {synonyms}"
+        print(f"\n[CACHE MISS] API Called! Expanded '{query}' -> '{expanded}'", flush=True)
+        return expanded
+        
+    except Exception as e:
+        print(f"API Error during expansion: {e}", flush=True)
+        return query
+
 
 class SemanticSearchEngine:
     def __init__(self, embeddings_path, metadata_path):
@@ -16,49 +55,42 @@ class SemanticSearchEngine:
         print("2. Building FAISS (Dense) Index...")
         self.index = faiss.IndexFlatIP(self.dimension)
         self.index.add(self.embeddings)
-        print(f"Dense Index built with {self.index.ntotal} vectors.")
         
         print("3. Building BM25 (Sparse) Index...")
-        # We combine title and abstract, lowercase it, and split into words for the exact-match engine
         corpus = (self.df['title'] + " " + self.df['abstract']).fillna("").tolist()
         tokenized_corpus = [doc.lower().split() for doc in corpus]
         self.bm25 = BM25Okapi(tokenized_corpus)
-        print("Sparse Index built.")
 
         print("4. Loading embedding model for queries...")
         device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
-        # self.model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
         self.model = SentenceTransformer('BAAI/bge-small-en-v1.5', device=device)
         print("Hybrid Search Engine Ready!\n")
 
-    def search(self, query, top_k=5):
-        """Runs both searches and merges them using Reciprocal Rank Fusion (RRF)."""
+    def search(self, query):
+        # --- NEW: EXPAND THE QUERY ---
+        expanded_query = expand_query(query)
         
         # --- 1. DENSE SEARCH (FAISS) ---
-        query_vector = self.model.encode([query], normalize_embeddings=True)
-        dense_distances, dense_indices = self.index.search(query_vector, 50) # Pull top 50 to fuse
+        instruction = "Represent this sentence for searching relevant passages: "
+        formatted_query = instruction + expanded_query
+        query_vector = self.model.encode([formatted_query], normalize_embeddings=True)
+        
+        dense_distances, dense_indices = self.index.search(query_vector, 50) 
         dense_results = dense_indices[0].tolist()
         
         # --- 2. SPARSE SEARCH (BM25) ---
-        tokenized_query = query.lower().split()
+        tokenized_query = expanded_query.lower().split()
         bm25_scores = self.bm25.get_scores(tokenized_query)
-        # Get the row indices of the top 50 highest scoring BM25 papers
         sparse_results = np.argsort(bm25_scores)[::-1][:50].tolist()
 
         # --- 3. RECIPROCAL RANK FUSION (RRF) ---
-        # Formula: RRF_Score = 1 / (rank + k) -> we use k=60 as industry standard
         rrf_scores = {}
-        
-        # Score the dense results
         for rank, row_idx in enumerate(dense_results):
             rrf_scores[row_idx] = rrf_scores.get(row_idx, 0) + (1.0 / (rank + 60))
-            
-        # Score the sparse results
         for rank, row_idx in enumerate(sparse_results):
             rrf_scores[row_idx] = rrf_scores.get(row_idx, 0) + (1.0 / (rank + 60))
             
-        # Sort by highest RRF score and grab the top_k
-        sorted_fused_results = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+        sorted_fused_results = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
         
         # --- 4. FORMAT RESULTS ---
         results = []
@@ -66,21 +98,22 @@ class SemanticSearchEngine:
             paper = self.df.iloc[row_idx]
             results.append({
                 "rank": rank_idx + 1,
-                "score": fusion_score,  # Now returning the Fusion score!
+                "score": fusion_score,
                 "title": paper['title'],
                 "categories": paper['categories'],
                 "abstract": paper['abstract'],
                 "id": paper['id']
             })
             
-        return results
+        return results, expanded_query
 
 if __name__ == "__main__":
     engine = SemanticSearchEngine("paper_embeddings.npy", "ai_papers_final.parquet")
     
     test_query = "dynamic guardrail models"
     print(f"\nSearching for: '{test_query}'")
-    results = engine.search(test_query, top_k=5)
+    results, eq = engine.search(test_query)
+    print(eq)
     
-    for res in results:
+    for res in results[:10]:
         print(f"{res['rank']}. [Score: {res['score']:.4f}] {res['title']}")
