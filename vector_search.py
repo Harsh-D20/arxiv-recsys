@@ -66,7 +66,7 @@ class SemanticSearchEngine:
         self.model = SentenceTransformer('BAAI/bge-small-en-v1.5', device=device)
         print("Hybrid Search Engine Ready!\n")
 
-    def search(self, query, top_k=5):
+    def search(self, query):
         # --- NEW: EXPAND THE QUERY ---
         expanded_query = expand_query(query)
         
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     
     test_query = "dynamic guardrail models"
     print(f"\nSearching for: '{test_query}'")
-    results, eq = engine.search(test_query, top_k=5)
+    results, eq = engine.search(test_query)
     print(eq)
     
     for res in results[:10]:
