@@ -6,3 +6,4 @@ sentence-transformers
 faiss-cpu
 streamlit
 groq
+rank_bm25
