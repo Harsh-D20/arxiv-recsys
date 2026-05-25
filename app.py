@@ -1,3 +1,12 @@
+import sys
+from unittest.mock import MagicMock
+
+# Create dummy modules in Python's memory cache to satisfy Streamlit's scanner
+mock_vision = MagicMock()
+sys.modules['torchvision'] = mock_vision
+sys.modules['torchvision.transforms'] = mock_vision
+sys.modules['torchvision.transforms.v2'] = mock_vision
+
 import streamlit as st
 from vector_search import SemanticSearchEngine
 import time
