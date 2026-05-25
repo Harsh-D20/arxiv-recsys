@@ -11,7 +11,6 @@ from groq import Groq
 # ------------------------------------------------------------
 # THE CACHED LLM EXPANSION FUNCTION
 # @lru_cache(maxsize=1000) stores the last 1000 searches in RAM. 
-# If a user searches the same thing twice, it skips the API call entirely!
 # ------------------------------------------------------------
 @lru_cache(maxsize=1000)
 def expand_query(query: str) -> str:
@@ -31,7 +30,7 @@ def expand_query(query: str) -> str:
         
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.1-8b-instant",
+            model="qwen/qwen3-32b",        # Limit: 60 requests/min, 6K tokens/min
             temperature=0.1,
             max_tokens=30,
         )
